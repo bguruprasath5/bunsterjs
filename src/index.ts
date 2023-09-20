@@ -36,6 +36,11 @@ class Bunster {
     ])
   ) as Router;
 
+  #corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": this.#corsConfig.allowedMethods.join(", "),
+    "Access-Control-Allow-Headers": this.#corsConfig.allowedHeaders.join(", "),
+  };
   #middlewares: BunsterMiddleware[] = [];
 
   private addRoute(
@@ -174,15 +179,9 @@ class Bunster {
     return this.#scheduler.listTasks();
   }
 
-  private async handle(request: Request) {
-    const startTime = Date.now();
-    const requestId = uuidv4();
+  private async handle(requestId: string, request: Request) {
     const headers: Record<string, string> = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods":
-        this.#corsConfig.allowedMethods.join(", "),
-      "Access-Control-Allow-Headers":
-        this.#corsConfig.allowedHeaders.join(", "),
+      ...this.#corsHeaders,
     };
     let status = 200;
 
@@ -192,13 +191,6 @@ class Bunster {
       this.#routers[request.method as HttpMethod].lookup(pathname);
 
     if (!matched) {
-      const responseTime = Date.now() - startTime;
-      this.#logger?.log(
-        "info",
-        `[${requestId}] ${
-          request.method
-        } ${pathname} - ${404} [${responseTime}ms]`
-      );
       return this.sendJson({ message: "Not found" }, 404);
     }
     try {
@@ -254,21 +246,9 @@ class Bunster {
       }
       const response = await matched.handler(context);
 
-      const responseTime = Date.now() - startTime;
-      this.#logger?.log(
-        "info",
-        `[${requestId}] ${request.method} ${pathname} - ${status} [${responseTime}ms]`
-      );
       return response;
     } catch (error) {
       this.#logger?.error(`${error}`);
-      const responseTime = Date.now() - startTime;
-      this.#logger?.log(
-        "info",
-        `[${requestId}] ${
-          request.method
-        } ${pathname} - ${500} [${responseTime}ms]`
-      );
       if (error instanceof ZodError) {
         return this.sendError(formatFirstZodError(error));
       }
@@ -285,7 +265,19 @@ class Bunster {
     const server = Bun.serve({
       ...options,
       fetch: async (request) => {
-        return await this.handle(request);
+        const requestId = uuidv4();
+        if (options.loggerConfig?.logRequest) {
+          const startTime = Date.now();
+          const response = await this.handle(requestId, request);
+          const responseTime = Date.now() - startTime;
+          this.#logger?.log(
+            "info",
+            `[${requestId}] ${request.method} ${request.url} - ${response.status} [${responseTime}ms]`
+          );
+          return response;
+        } else {
+          return await this.handle(requestId, request);
+        }
       },
     });
     console.log(

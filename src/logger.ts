@@ -13,6 +13,7 @@ export interface BunsterLoggerConfig {
   logLevel?: "info" | "debug" | "error" | "warn";
   logToConsole?: boolean;
   logToFile?: boolean;
+  logRequest?: boolean;
   enableDailyRotation?: boolean;
   logDirectory?: string;
   maxLogFiles?: string;
