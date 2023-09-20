@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BunsterRouteGroup } from "../src/router-group";
+import { BunsterRouteGroup } from "../dist";
 
 const inputSchema = {
   query: z.object({

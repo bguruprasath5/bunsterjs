@@ -1,6 +1,6 @@
 import { RadixRouter } from "radix3";
 import { ZodSchema, z } from "zod";
-import { BunsterLoggerConfig } from "./logger";
+import { BunsterLoggerConfig } from "./logger.ts";
 
 export type ServeOptions = {
   port?: string | number;

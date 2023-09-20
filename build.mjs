@@ -1,8 +1,16 @@
-import dts from 'bun-plugin-dts'
+import dts from "bun-plugin-dts";
 
-await Bun.build({
-  entrypoints: ['./src/index.ts'],
-  outdir: './dist',
+const result = await Bun.build({
+  entrypoints: ["./src/index.ts"],
+  outdir: "./dist",
   minify: true,
-  plugins: [dts()]
-})
+  plugins: [dts()],
+  target: "bun",
+});
+if (!result.success) {
+  console.error("Build failed");
+  for (const message of result.logs) {
+    // Bun will pretty print the message object
+    console.error(message);
+  }
+}

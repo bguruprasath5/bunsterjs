@@ -5,17 +5,17 @@ import {
   HttpMethod,
   RouteParams,
   RoutePath,
-} from "./types";
+} from "./types.ts";
 
 export class BunsterRouteGroup {
-  #basePath: RoutePath;
-  #routes: Array<{
+  private basePath: RoutePath;
+  private routes: Array<{
     method: HttpMethod;
     params: RouteParams<any, any, any>;
   }> = [];
 
   constructor(basePath: RoutePath) {
-    this.#basePath = basePath;
+    this.basePath = basePath;
   }
 
   addRoute<P, Q, B>(
@@ -25,11 +25,11 @@ export class BunsterRouteGroup {
     input?: BunsterHandlerInput,
     middlewares?: BunsterMiddleware<P, Q, B>[]
   ) {
-    this.#routes.push({
+    this.routes.push({
       method,
       params: {
         handler,
-        path: (this.#basePath + path) as RoutePath,
+        path: (this.basePath + path) as RoutePath,
         input,
         middlewares,
       },
@@ -91,6 +91,6 @@ export class BunsterRouteGroup {
     method: HttpMethod;
     params: RouteParams<any, any, any>;
   }> {
-    return this.#routes;
+    return this.routes;
   }
 }

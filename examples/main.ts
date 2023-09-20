@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { Bunster } from "../src";
-import userRouteGroup from "./user.route";
-import { CronExpression } from "../src/cron-expression.enum";
+import { Bunster } from "../dist/";
+import userRouteGroup from "./user.route.ts";
+import { CronExpression } from "../src/cron-expression.enum.ts";
 
 const xPoweredBy = "benchmark";
 const inputSchema = {
@@ -47,5 +47,5 @@ app.schedule({
 });
 
 app.serve({
-  port: 4000,
+  port: 3000,
 });

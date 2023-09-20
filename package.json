@@ -1,7 +1,7 @@
 {
   "name": "bunsterjs",
   "author": "Guruprasath Balasubramanian <hello@guruprasath.dev>",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -39,7 +39,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@types/nodemailer": "^6.4.10",
     "bun-plugin-dts": "^0.2.0",
     "jose": "^4.14.6",
     "jsonwebtoken": "^9.0.2",

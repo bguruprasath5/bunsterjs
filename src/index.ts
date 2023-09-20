@@ -1,9 +1,8 @@
 import { Server } from "bun";
-import BunsterLogger from "./logger";
 import { createRouter } from "radix3";
 import { v4 as uuidv4 } from "uuid";
 import { ZodError } from "zod";
-import { formatFirstZodError, parseAndValidate } from "./validator";
+import { formatFirstZodError, parseAndValidate } from "./validator.ts";
 import {
   BunsterContext,
   BunsterHandler,
@@ -15,13 +14,14 @@ import {
   RoutePath,
   Router,
   ServeOptions,
-} from "./types";
-import { BunsterRouteGroup } from "./router-group";
-import { Scheduler } from "./scheduler";
-import { BunsterJwt } from "./jwt";
-import { BunsterMail } from "./mail";
+} from "./types.ts";
+import { BunsterRouteGroup } from "./router-group.ts";
+import { Scheduler } from "./scheduler.ts";
+import { BunsterJwt } from "./jwt.ts";
+import { BunsterMail } from "./mail.ts";
+import BunsterLogger from "./logger.ts";
 
-export class Bunster {
+class Bunster {
   #corsConfig = {
     allowAnyOrigin: true,
     allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -297,4 +297,4 @@ export class Bunster {
   }
 }
 
-export { BunsterJwt, BunsterMail };
+export { Bunster, BunsterRouteGroup, BunsterJwt, BunsterMail };
