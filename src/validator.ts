@@ -1,11 +1,12 @@
 import { ZodError, ZodSchema } from "zod";
 
-export function parseAndValidate<T>(
+export async function parseAndValidate<T>(
   data: any,
   schema?: ZodSchema<T>
-): T | undefined {
+): Promise<T | undefined> {
   if (!schema) return data;
-  return schema.parse(data);
+  const parsedData = await schema.parseAsync(data);
+  return parsedData;
 }
 
 export function formatFirstZodError(error: ZodError): string {

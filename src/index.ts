@@ -1,6 +1,5 @@
 import { Server } from "bun";
 import { createRouter } from "radix3";
-import { v4 as uuidv4 } from "uuid";
 import { ZodError } from "zod";
 import { formatFirstZodError, parseAndValidate } from "./validator.ts";
 import {
@@ -22,11 +21,6 @@ import { BunsterMail } from "./mail.ts";
 import BunsterLogger from "./logger.ts";
 
 class Bunster {
-  #corsConfig = {
-    allowAnyOrigin: true,
-    allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  };
   #scheduler: Scheduler = new Scheduler();
   #logger: BunsterLogger | null = null;
   #routers: Router = Object.fromEntries(
@@ -36,12 +30,17 @@ class Bunster {
     ])
   ) as Router;
 
-  #corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": this.#corsConfig.allowedMethods.join(", "),
-    "Access-Control-Allow-Headers": this.#corsConfig.allowedHeaders.join(", "),
-  };
   #middlewares: BunsterMiddleware[] = [];
+
+  private route<P, Q, B>(method: HttpMethod, params: RouteParams<P, Q, B>) {
+    this.addRoute(
+      params.path,
+      params.handler,
+      method,
+      params?.input,
+      params?.middlewares
+    );
+  }
 
   private addRoute(
     path: RoutePath,
@@ -76,53 +75,23 @@ class Bunster {
   }
 
   get<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(
-      params.path,
-      params.handler,
-      "GET",
-      params?.input,
-      params?.middlewares
-    );
+    this.route("GET", params);
   }
 
   post<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(
-      params.path,
-      params.handler,
-      "POST",
-      params?.input,
-      params?.middlewares
-    );
+    this.route("POST", params);
   }
 
   put<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(
-      params.path,
-      params.handler,
-      "PUT",
-      params?.input,
-      params?.middlewares
-    );
+    this.route("PUT", params);
   }
 
   patch<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(
-      params.path,
-      params.handler,
-      "PATCH",
-      params?.input,
-      params?.middlewares
-    );
+    this.route("PATCH", params);
   }
 
   delete<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(
-      params.path,
-      params.handler,
-      "DELETE",
-      params?.input,
-      params?.middlewares
-    );
+    this.route("DELETE", params);
   }
 
   private sendResponse(
@@ -163,7 +132,7 @@ class Bunster {
     task: BunsterTaskHandler;
   }): void {
     this.#scheduler.schedule(params.id, params.cronExpression, () => {
-      const requestId = uuidv4();
+      const requestId = crypto.randomUUID();
       params.task({
         log: (
           level: "info" | "debug" | "error" | "warn" = "info",
@@ -181,7 +150,9 @@ class Bunster {
 
   private async handle(requestId: string, request: Request) {
     const headers: Record<string, string> = {
-      ...this.#corsHeaders,
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
     let status = 200;
 
@@ -193,31 +164,33 @@ class Bunster {
     if (!matched) {
       return this.sendJson({ message: "Not found" }, 404);
     }
+    const logRequest = (
+      level: "info" | "debug" | "error" | "warn",
+      msg: string
+    ) => {
+      this.#logger?.[level](`[${requestId}]  ${msg}`);
+    };
     try {
-      const query: Record<string, string> = {};
-      searchParams.forEach((value, key) => {
-        query[key] = value;
-      });
+      const { input } = matched;
+
       const context: BunsterContext = {
-        params: parseAndValidate(matched.params, matched.input?.params),
-        query: parseAndValidate(query, matched.input?.query),
-        body: request.body
-          ? parseAndValidate(await request.json(), matched.input?.body)
-          : undefined,
+        params:
+          input?.params &&
+          (await parseAndValidate(matched.params, input.params)),
+        query:
+          input?.query &&
+          (await parseAndValidate(
+            Object.fromEntries(searchParams.entries()),
+            input.query
+          )),
+        body:
+          input?.body &&
+          (await parseAndValidate(await request.json(), input.body)),
         meta: {},
         headers: request.headers,
-        log: (
-          level: "info" | "debug" | "error" | "warn" = "info",
-          msg: string
-        ) => {
-          this.#logger?.[level](`[${requestId}]  ${msg}`);
-        },
-        sendJson: (data: any) => {
-          return this.sendJson(data, status, headers);
-        },
-        sendText: (data: string) => {
-          return this.sendText(data, status, headers);
-        },
+        log: logRequest,
+        sendJson: (data: any) => this.sendJson(data, status, headers),
+        sendText: (data: string) => this.sendText(data, status, headers),
         setStatus: (statusCode: number) => {
           status = statusCode;
         },
@@ -225,28 +198,17 @@ class Bunster {
           headers[name] = value;
         },
       };
-      if (matched.input?.params) {
-        context.params = parseAndValidate(matched.params, matched.input.params);
-      }
-      if (matched.input?.query) {
-        context.query = parseAndValidate(query, matched.input.query);
-      }
-      if (matched.input?.body) {
-        context.body = parseAndValidate(
-          request.body ? await request.json() : undefined,
-          matched.input.body
+
+      await Promise.all(
+        this.#middlewares.map((middleware) => middleware(context))
+      );
+      if (matched.middlewares) {
+        await Promise.all(
+          matched.middlewares?.map((middleware) => middleware(context))
         );
       }
 
-      for (const middleware of this.#middlewares) {
-        await middleware(context);
-      }
-      for (const middleware of matched.middlewares ?? []) {
-        await middleware(context);
-      }
-      const response = await matched.handler(context);
-
-      return response;
+      return matched.handler(context);
     } catch (error) {
       this.#logger?.error(`${error}`);
       if (error instanceof ZodError) {
@@ -265,7 +227,7 @@ class Bunster {
     const server = Bun.serve({
       ...options,
       fetch: async (request) => {
-        const requestId = uuidv4();
+        const requestId = crypto.randomUUID();
         if (options.loggerConfig?.logRequest) {
           const startTime = Date.now();
           const response = await this.handle(requestId, request);
