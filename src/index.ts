@@ -18,6 +18,8 @@ import {
 } from "./types";
 import { BunsterRouteGroup } from "./router-group";
 import { Scheduler } from "./scheduler";
+import { BunsterJwt } from "./jwt";
+import { BunsterMail } from "./mail";
 
 export class Bunster {
   #corsConfig = {
@@ -40,16 +42,21 @@ export class Bunster {
     path: RoutePath,
     handler: BunsterHandler,
     method: HttpMethod,
-    input?: BunsterHandlerInput
+    input?: BunsterHandlerInput,
+    middlewares?: BunsterMiddleware[]
   ) {
-    this.#routers[method].insert(path, { handler, method, input });
+    this.#routers[method].insert(path, { handler, method, input, middlewares });
   }
 
   globalMiddleware(middleware: BunsterMiddleware) {
     this.#middlewares.push(middleware);
   }
 
-  mount(params: { path: RoutePath; routeGroup: BunsterRouteGroup }) {
+  mount(params: {
+    path: RoutePath;
+    routeGroup: BunsterRouteGroup;
+    middlewares?: BunsterMiddleware[];
+  }) {
     for (const route of params.routeGroup.getRoutes()) {
       this.addRoute(
         params.path === "/"
@@ -57,29 +64,60 @@ export class Bunster {
           : ((params.path + route.params.path) as RoutePath),
         route.params.handler,
         route.method,
-        route.params?.input
+        route.params?.input,
+        route.params?.middlewares
       );
     }
   }
 
   get<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(params.path, params.handler, "GET", params?.input);
+    this.addRoute(
+      params.path,
+      params.handler,
+      "GET",
+      params?.input,
+      params?.middlewares
+    );
   }
 
   post<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(params.path, params.handler, "POST", params?.input);
+    this.addRoute(
+      params.path,
+      params.handler,
+      "POST",
+      params?.input,
+      params?.middlewares
+    );
   }
 
   put<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(params.path, params.handler, "PUT", params?.input);
+    this.addRoute(
+      params.path,
+      params.handler,
+      "PUT",
+      params?.input,
+      params?.middlewares
+    );
   }
 
   patch<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(params.path, params.handler, "PATCH", params?.input);
+    this.addRoute(
+      params.path,
+      params.handler,
+      "PATCH",
+      params?.input,
+      params?.middlewares
+    );
   }
 
   delete<P, Q, B>(params: RouteParams<P, Q, B>) {
-    this.addRoute(params.path, params.handler, "DELETE", params?.input);
+    this.addRoute(
+      params.path,
+      params.handler,
+      "DELETE",
+      params?.input,
+      params?.middlewares
+    );
   }
 
   private sendResponse(
@@ -211,6 +249,9 @@ export class Bunster {
       for (const middleware of this.#middlewares) {
         await middleware(context);
       }
+      for (const middleware of matched.middlewares ?? []) {
+        await middleware(context);
+      }
       const response = await matched.handler(context);
 
       const responseTime = Date.now() - startTime;
@@ -255,3 +296,5 @@ export class Bunster {
     return server;
   }
 }
+
+export { BunsterJwt, BunsterMail };

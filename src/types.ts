@@ -13,6 +13,7 @@ export type Router = {
     method: HttpMethod;
     handler: BunsterHandler;
     input?: BunsterHandlerInput;
+    middlewares?: BunsterMiddleware[];
   }>;
 };
 export interface BunsterContext<P = any, Q = any, B = any> {
@@ -38,6 +39,7 @@ export type RouteParams<P, Q, B> = {
   path: RoutePath;
   handler: BunsterHandler<P, Q, B>;
   input?: BunsterHandlerInput<P, Q, B>;
+  middlewares?: BunsterMiddleware<P, Q, B>[];
 };
 
 export type BunsterTaskContext = {

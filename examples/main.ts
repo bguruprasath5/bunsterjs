@@ -38,7 +38,7 @@ app.get({
 
 app.schedule({
   id: "task#1",
-  cronExpression: CronExpression.EVERY_10_SECONDS,
+  cronExpression: CronExpression.EVERY_MINUTE,
   task: ({ log }) => {
     log("info", "scheduler started");
     log("info", "hi from scheduler");

@@ -18,6 +18,12 @@ userRouteGroup.get({
   handler: (ctx) => {
     return ctx.sendText(`user id = ${ctx.params.id}, name = ${ctx.query.name}`);
   },
+  middlewares: [
+    (ctx) => {
+      ctx.log("info", `hello from user middleware ${ctx.params.id}`);
+      throw new Error("Error from user middleware");
+    },
+  ],
 });
 
 export default userRouteGroup;
