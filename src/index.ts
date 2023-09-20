@@ -9,11 +9,15 @@ import {
   BunsterHandler,
   BunsterHandlerInput,
   BunsterMiddleware,
+  BunsterTaskHandler,
   HttpMethod,
   RouteParams,
+  RoutePath,
   Router,
   ServeOptions,
 } from "./types";
+import { BunsterRouteGroup } from "./router-group";
+import { Scheduler } from "./scheduler";
 
 export class Bunster {
   #corsConfig = {
@@ -21,7 +25,8 @@ export class Bunster {
     allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   };
-
+  #scheduler: Scheduler = new Scheduler();
+  #logger: BunsterLogger | null = null;
   #routers: Router = Object.fromEntries(
     ["GET", "POST", "PUT", "PATCH", "DELETE"].map((method) => [
       method,
@@ -29,10 +34,10 @@ export class Bunster {
     ])
   ) as Router;
 
-  middlewares: BunsterMiddleware[] = [];
+  #middlewares: BunsterMiddleware[] = [];
 
-  addRoute(
-    path: string,
+  private addRoute(
+    path: RoutePath,
     handler: BunsterHandler,
     method: HttpMethod,
     input?: BunsterHandlerInput
@@ -41,51 +46,40 @@ export class Bunster {
   }
 
   globalMiddleware(middleware: BunsterMiddleware) {
-    this.middlewares.push(middleware);
+    this.#middlewares.push(middleware);
   }
 
-  get<P, Q, B>(
-    path: string,
-    handler: BunsterHandler<P, Q, B>,
-    params?: RouteParams<P, Q, B>
-  ) {
-    this.addRoute(path, handler, "GET", params?.input);
+  mount(params: { path: RoutePath; routeGroup: BunsterRouteGroup }) {
+    for (const route of params.routeGroup.getRoutes()) {
+      this.addRoute(
+        params.path === "/"
+          ? route.params.path
+          : ((params.path + route.params.path) as RoutePath),
+        route.params.handler,
+        route.method,
+        route.params?.input
+      );
+    }
   }
 
-  post<P, Q, B>(
-    path: string,
-    handler: BunsterHandler<P, Q, B>,
-    params?: RouteParams<P, Q, B>
-  ) {
-    this.addRoute(path, handler, "POST", params?.input);
+  get<P, Q, B>(params: RouteParams<P, Q, B>) {
+    this.addRoute(params.path, params.handler, "GET", params?.input);
   }
 
-  put<P, Q, B>(
-    path: string,
-    handler: BunsterHandler<P, Q, B>,
-    params?: RouteParams<P, Q, B>
-  ) {
-    this.addRoute(path, handler, "PUT", params?.input);
+  post<P, Q, B>(params: RouteParams<P, Q, B>) {
+    this.addRoute(params.path, params.handler, "POST", params?.input);
   }
 
-  patch<P, Q, B>(
-    path: string,
-    handler: BunsterHandler<P, Q, B>,
-    params?: RouteParams<P, Q, B>
-  ) {
-    this.addRoute(path, handler, "PATCH", params?.input);
+  put<P, Q, B>(params: RouteParams<P, Q, B>) {
+    this.addRoute(params.path, params.handler, "PUT", params?.input);
   }
 
-  delete<P, Q, B>(
-    path: string,
-    handler: BunsterHandler<P, Q, B>,
-    params?: RouteParams<P, Q, B>
-  ) {
-    this.addRoute(path, handler, "DELETE", params?.input);
+  patch<P, Q, B>(params: RouteParams<P, Q, B>) {
+    this.addRoute(params.path, params.handler, "PATCH", params?.input);
   }
 
-  lookup(path: string, method: HttpMethod) {
-    return this.#routers[method].lookup(path);
+  delete<P, Q, B>(params: RouteParams<P, Q, B>) {
+    this.addRoute(params.path, params.handler, "DELETE", params?.input);
   }
 
   private sendResponse(
@@ -120,18 +114,38 @@ export class Bunster {
     return this.sendJson({ message }, status);
   }
 
-  private async handle(request: Request, logger: BunsterLogger) {
-    const startTime = Date.now();
-    let requestId = uuidv4();
+  schedule(params: {
+    id: string;
+    cronExpression: string;
+    task: BunsterTaskHandler;
+  }): void {
+    this.#scheduler.schedule(params.id, params.cronExpression, () => {
+      const requestId = uuidv4();
+      params.task({
+        log: (
+          level: "info" | "debug" | "error" | "warn" = "info",
+          msg: string
+        ) => {
+          this.#logger?.[level](`[${requestId}]  ${msg}`);
+        },
+      });
+    });
+  }
 
-    let headers: Record<string, string> = {
+  listScheduledTasks(): string[] {
+    return this.#scheduler.listTasks();
+  }
+
+  private async handle(request: Request) {
+    const startTime = Date.now();
+    const requestId = uuidv4();
+    const headers: Record<string, string> = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods":
         this.#corsConfig.allowedMethods.join(", "),
       "Access-Control-Allow-Headers":
         this.#corsConfig.allowedHeaders.join(", "),
     };
-
     let status = 200;
 
     const { pathname, searchParams } = new URL(request.url);
@@ -141,7 +155,7 @@ export class Bunster {
 
     if (!matched) {
       const responseTime = Date.now() - startTime;
-      logger.log(
+      this.#logger?.log(
         "info",
         `[${requestId}] ${
           request.method
@@ -163,10 +177,10 @@ export class Bunster {
         meta: {},
         headers: request.headers,
         log: (
-          msg: string,
-          level: "info" | "debug" | "error" | "warn" = "info"
+          level: "info" | "debug" | "error" | "warn" = "info",
+          msg: string
         ) => {
-          logger[level](`[${requestId}]  ${msg}`);
+          this.#logger?.[level](`[${requestId}]  ${msg}`);
         },
         sendJson: (data: any) => {
           return this.sendJson(data, status, headers);
@@ -185,36 +199,30 @@ export class Bunster {
         context.params = parseAndValidate(matched.params, matched.input.params);
       }
       if (matched.input?.query) {
-        const query: Record<string, string> = {};
-        searchParams.forEach((value, key) => {
-          query[key] = value;
-        });
         context.query = parseAndValidate(query, matched.input.query);
       }
       if (matched.input?.body) {
-        if (request.body) {
-          context.body = parseAndValidate(
-            await request.json(),
-            matched.input.body
-          );
-        }
+        context.body = parseAndValidate(
+          request.body ? await request.json() : undefined,
+          matched.input.body
+        );
       }
 
-      for (const middleware of this.middlewares) {
+      for (const middleware of this.#middlewares) {
         await middleware(context);
       }
       const response = await matched.handler(context);
 
       const responseTime = Date.now() - startTime;
-      logger.log(
+      this.#logger?.log(
         "info",
         `[${requestId}] ${request.method} ${pathname} - ${status} [${responseTime}ms]`
       );
       return response;
     } catch (error) {
-      logger.error(`${error}`);
+      this.#logger?.error(`${error}`);
       const responseTime = Date.now() - startTime;
-      logger.log(
+      this.#logger?.log(
         "info",
         `[${requestId}] ${
           request.method
@@ -232,11 +240,11 @@ export class Bunster {
    * @param cb Server callback after server starts listening
    */
   serve(options: ServeOptions, cb?: (server: Server) => void) {
-    const logger = new BunsterLogger(options.loggerConfig);
+    this.#logger = new BunsterLogger(options.loggerConfig);
     const server = Bun.serve({
       ...options,
       fetch: async (request) => {
-        return await this.handle(request, logger);
+        return await this.handle(request);
       },
     });
     console.log(

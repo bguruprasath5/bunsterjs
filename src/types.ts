@@ -20,7 +20,7 @@ export interface BunsterContext<P = any, Q = any, B = any> {
   query: Q;
   body: B;
   headers?: Request["headers"];
-  log: (msg: string, level: "info" | "debug" | "error" | "warn") => void;
+  log: (level: "info" | "debug" | "error" | "warn", msg: string) => void;
   meta: Record<string, unknown>;
   sendJson: (data: any) => Response | Promise<Response>;
   sendText: (data: string) => Response | Promise<Response>;
@@ -35,8 +35,16 @@ export type BunsterHandlerInput<Params = any, Query = any, Body = any> = {
 };
 
 export type RouteParams<P, Q, B> = {
+  path: RoutePath;
+  handler: BunsterHandler<P, Q, B>;
   input?: BunsterHandlerInput<P, Q, B>;
 };
+
+export type BunsterTaskContext = {
+  log: (level: "info" | "debug" | "error" | "warn", msg: string) => void;
+};
+
+export type BunsterTaskHandler = (context: BunsterTaskContext) => void;
 
 export type BunsterHandler<P = any, Q = any, B = any> = (
   context: BunsterContext<P, Q, B>
@@ -47,3 +55,4 @@ export type BunsterMiddleware<P = any, Q = any, B = any> = (
 ) => void;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type RoutePath = `/` | `${`/`}${string}`;

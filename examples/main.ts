@@ -1,14 +1,9 @@
 import { z } from "zod";
 import { Bunster } from "../src";
+import userRouteGroup from "./user.route";
+import { CronExpression } from "../src/cron-expression.enum";
 
 const xPoweredBy = "benchmark";
-
-const app = new Bunster();
-
-app.get("/", (ctx) => ctx.sendText("Hi"));
-
-app.post("/json", (ctx) => ctx.sendJson(ctx.body));
-
 const inputSchema = {
   query: z.object({
     name: z.string(),
@@ -18,16 +13,38 @@ const inputSchema = {
   }),
 };
 
-app.get(
-  "/id/:id",
-  (ctx) => {
+const app = new Bunster();
+
+app.mount({ path: "/", routeGroup: userRouteGroup });
+
+app.get({
+  path: "/",
+  handler: (ctx) => ctx.sendText("Hi"),
+});
+
+app.post({
+  path: "/json",
+  handler: (ctx) => ctx.sendJson(ctx.body),
+});
+
+app.get({
+  path: "/id/:id",
+  input: inputSchema,
+  handler: (ctx) => {
     ctx.setHeader("x-powered-by", xPoweredBy);
     return ctx.sendText(`${ctx.params.id} ${ctx.query.name}`);
   },
-  {
-    input: inputSchema,
-  }
-);
+});
+
+app.schedule({
+  id: "task#1",
+  cronExpression: CronExpression.EVERY_10_SECONDS,
+  task: ({ log }) => {
+    log("info", "scheduler started");
+    log("info", "hi from scheduler");
+    log("info", "scheduler ended");
+  },
+});
 
 app.serve({
   port: 4000,

@@ -30,14 +30,16 @@
   },
   "bugs": "https://github.com/bguruprasath5/bunsterjs/issues",
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "@types/node-cron": "^3.0.8",
+    "@types/uuid": "^9.0.4"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@types/uuid": "^9.0.4",
     "bun-plugin-dts": "^0.2.0",
+    "node-cron": "^3.0.2",
     "radix3": "^1.1.0",
     "uuid": "^9.0.1",
     "winston": "^3.10.0",
