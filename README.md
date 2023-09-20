@@ -1,21 +1,39 @@
 # BunsterJs
-    Minimalistic. Robust. Efficient. Your go-to JSON REST API framework.
+    Simple rest api framework for bun.
 
-### Why BunsterJS?
-    🚀 Streamlined Experience: Specifically tailored for JSON REST APIs. No more, no less.
-    📊 Winston Logger: Track every request, spot errors, and optimize performance without breaking a sweat.
-    🔄 Daily Log Rotation: Say goodbye to overwhelming log files. BunsterJS keeps them in check.
-    🎯 Opinionated, Yet Flexible: We made some decisions for you, so you can focus on what truly matters.
+## Features
+- Focus on simple and easy to use.
+- Fast Performance.
+- Built-in Zod input validator.
+- Built-in logger based on winston with log rotation.
 
 ### Quickstart
 
-    import { BunsterServer, BunsterRouter } from 'bunster';
+    const app = new Bunster();
 
-    const router = new BunsterRouter();
-    router.get('/', (ctx) => {
-    return { message: 'Welcome to Bunster!' };
+    app.get("/", (ctx) => ctx.sendText("Hi"));
+
+    app.post("/json", (ctx) => ctx.sendJson(ctx.body));
+
+    const inputSchema = {
+        query: z.object({
+            name: z.string(),
+        }),
+        params: z.object({
+            id: z.coerce.number(),
+        }),
+    };
+
+    app.get("/id/:id",(ctx) => {
+        ctx.setHeader("x-powered-by", xPoweredBy);
+        return ctx.sendText(`${ctx.params.id} ${ctx.query.name}`);
+        },
+        {
+            input: inputSchema,
+        }
+    );
+
+    app.serve({
+        port: 4000,
     });
 
-    const server = new BunsterServer();
-    server.use(router);
-    server.listen(3000);

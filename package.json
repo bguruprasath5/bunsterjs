@@ -1,9 +1,10 @@
 {
   "name": "bunsterjs",
   "author": "Guruprasath Balasubramanian <hello@guruprasath.dev>",
-  "version": "0.0.1",
+  "version": "0.0.8",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "description": "",
   "scripts": {
     "example": "bun run examples/main.ts --reload",
@@ -14,7 +15,12 @@
     "dist"
   ],
   "keywords": [
-    "bun"
+    "bunster",
+    "bunsterjs",
+    "bun",
+    "bun router",
+    "bun framework",
+    "bun api"
   ],
   "license": "MIT",
   "homepage": "https://github.com/bguruprasath5/bunsterjs/#readme",
@@ -31,6 +37,7 @@
   },
   "dependencies": {
     "@types/uuid": "^9.0.4",
+    "bun-plugin-dts": "^0.2.0",
     "radix3": "^1.1.0",
     "uuid": "^9.0.1",
     "winston": "^3.10.0",

@@ -1,27 +1,33 @@
-import { BunsterServer } from "../src";
-import { HttpStatusCode } from "../src/enum";
-import { BunsterRouter } from "../src/router";
+import { z } from "zod";
+import { Bunster } from "../src";
 
-const router = new BunsterRouter();
+const xPoweredBy = "benchmark";
 
-router.get("/", (ctx) => {
-  ctx.logger.info(`Query: ${JSON.stringify(ctx.query)}`);
-  ctx.logger.info(`Meta: ${JSON.stringify(ctx.meta)}`);
-  return { status: HttpStatusCode.OK, message: "Hello from Bunster server" };
-});
+const app = new Bunster();
 
-router.middleware((context) => {
-  context.meta.userId = 123;
-});
+app.get("/", (ctx) => ctx.sendText("Hi"));
 
-router.post("/", ({ query, body, headers, logger }) => {
-  logger.info(`Query: ${JSON.stringify(query)}`);
-  logger.info(`Body: ${JSON.stringify(body)}`);
-  logger.info(`Headers: ${JSON.stringify(headers)}`);
-  return { status: HttpStatusCode.BadRequest, message: "Invalid request" };
-});
+app.post("/json", (ctx) => ctx.sendJson(ctx.body));
 
-const app = new BunsterServer(router);
+const inputSchema = {
+  query: z.object({
+    name: z.string(),
+  }),
+  params: z.object({
+    id: z.coerce.number(),
+  }),
+};
+
+app.get(
+  "/id/:id",
+  (ctx) => {
+    ctx.setHeader("x-powered-by", xPoweredBy);
+    return ctx.sendText(`${ctx.params.id} ${ctx.query.name}`);
+  },
+  {
+    input: inputSchema,
+  }
+);
 
 app.serve({
   port: 4000,
