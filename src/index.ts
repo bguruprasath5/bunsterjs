@@ -1,7 +1,6 @@
 import { Server } from "bun";
 import { createRouter } from "radix3";
-import { ZodError } from "zod";
-import { formatFirstZodError, parseAndValidate } from "./validator.ts";
+import { parseAndValidate } from "./validator.ts";
 import {
   BunsterContext,
   BunsterHandler,
@@ -233,9 +232,7 @@ class Bunster {
       return matched.handler(context);
     } catch (error) {
       this.#logger?.error(`${error}`);
-      if (error instanceof ZodError) {
-        return this.sendError(formatFirstZodError(error));
-      } else if (error instanceof HttpError) {
+      if (error instanceof HttpError) {
         return this.sendError(error.message, error.status);
       } else {
         return this.sendError(error?.toString() ?? "An error occurred");
@@ -252,6 +249,13 @@ class Bunster {
     this.#cors = options.cors ?? false;
     const server = Bun.serve({
       ...options,
+      error: async (error) => {
+        if (error instanceof HttpError) {
+          return this.sendError(error.message, error.status);
+        } else {
+          return this.sendError(error?.toString() ?? "An error occurred");
+        }
+      },
       fetch: async (request) => {
         const requestId = crypto.randomUUID();
         if (options.loggerConfig?.logRequest) {
