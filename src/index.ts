@@ -22,6 +22,7 @@ import BunsterLogger from "./logger.ts";
 import { HttpError } from "./error.ts";
 import { HttpStatus } from "./http-status.enum.ts";
 import { CronExpression } from "./cron-expression.enum.ts";
+import { BunsterDateTime } from "./datetime.ts";
 
 class Bunster {
   #scheduler: Scheduler = new Scheduler();
@@ -281,5 +282,6 @@ export {
   BunsterRouteGroup,
   BunsterJwt,
   BunsterMail,
+  BunsterDateTime,
   HttpError,
 };
