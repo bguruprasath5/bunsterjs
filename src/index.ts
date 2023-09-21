@@ -20,6 +20,9 @@ import { Scheduler } from "./scheduler.ts";
 import { BunsterJwt } from "./jwt.ts";
 import { BunsterMail } from "./mail.ts";
 import BunsterLogger from "./logger.ts";
+import { HttpError } from "./error.ts";
+import { HttpStatus } from "./http-status.enum.ts";
+import { CronExpression } from "./cron-expression.enum.ts";
 
 class Bunster {
   #scheduler: Scheduler = new Scheduler();
@@ -65,6 +68,10 @@ class Bunster {
 
   mount(params: MountParams) {
     for (const route of params.routeGroup.getRoutes()) {
+      route.params.middlewares = [
+        ...(params.routeGroup.middlewares ?? []),
+        ...(route.params.middlewares ?? []),
+      ];
       this.route(route.method, route.params);
     }
     return this;
@@ -98,7 +105,7 @@ class Bunster {
   private sendResponse(
     data: any,
     contentType: string,
-    status: number = 200,
+    status: HttpStatus = HttpStatus.OK,
     headers: HeadersInit = {}
   ) {
     const responseHeaders = {
@@ -115,7 +122,11 @@ class Bunster {
     });
   }
 
-  private sendJson(data: any, status: number = 200, headers: HeadersInit = {}) {
+  private sendJson(
+    data: any,
+    status: HttpStatus = HttpStatus.OK,
+    headers: HeadersInit = {}
+  ) {
     return this.sendResponse(
       JSON.stringify(data),
       "application/json",
@@ -124,11 +135,18 @@ class Bunster {
     );
   }
 
-  private sendText(data: any, status: number = 200, headers: HeadersInit = {}) {
+  private sendText(
+    data: any,
+    status: HttpStatus = HttpStatus.OK,
+    headers: HeadersInit = {}
+  ) {
     return this.sendResponse(data.toString(), "text/plain", status, headers);
   }
 
-  private sendError(message: string, status: number = 500) {
+  private sendError(
+    message: string,
+    status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR
+  ) {
     return this.sendJson({ message }, status);
   }
 
@@ -162,7 +180,7 @@ class Bunster {
       this.#routers[request.method as HttpMethod].lookup(pathname);
 
     if (!matched) {
-      return this.sendJson({ message: "Not found" }, 404);
+      return this.sendJson({ message: "Not found" }, HttpStatus.NOT_FOUND);
     }
     const logRequest = (
       level: "info" | "debug" | "error" | "warn",
@@ -191,36 +209,37 @@ class Bunster {
         log: logRequest,
         sendJson: (
           data: any,
-          params?: { headers?: HeadersInit; status?: number }
+          params?: { headers?: HeadersInit; status?: HttpStatus }
         ) =>
           this.sendJson(data, params?.status, {
             ...params?.headers,
           }),
         sendText: (
           data: string,
-          params?: { headers?: HeadersInit; status?: number }
+          params?: { headers?: HeadersInit; status?: HttpStatus }
         ) =>
           this.sendText(data, params?.status, {
             ...params?.headers,
           }),
       };
 
-      await Promise.all(
-        this.#middlewares.map((middleware) => middleware(context))
-      );
-      if (matched.middlewares) {
-        await Promise.all(
-          matched.middlewares?.map((middleware) => middleware(context))
-        );
+      for (const middleware of this.#middlewares) {
+        await middleware(context);
       }
 
+      for (const middleware of matched.middlewares ?? []) {
+        await middleware(context);
+      }
       return matched.handler(context);
     } catch (error) {
       this.#logger?.error(`${error}`);
       if (error instanceof ZodError) {
         return this.sendError(formatFirstZodError(error));
+      } else if (error instanceof HttpError) {
+        return this.sendError(error.message, error.status);
+      } else {
+        return this.sendError(error?.toString() ?? "An error occurred");
       }
-      return this.sendError(error?.toString() ?? "An error occurred");
     }
   }
 
@@ -258,4 +277,12 @@ class Bunster {
   }
 }
 
-export { Bunster, BunsterRouteGroup, BunsterJwt, BunsterMail };
+export {
+  HttpStatus,
+  CronExpression,
+  Bunster,
+  BunsterRouteGroup,
+  BunsterJwt,
+  BunsterMail,
+  HttpError,
+};

@@ -13,9 +13,14 @@ export class BunsterRouteGroup {
     method: HttpMethod;
     params: RouteParams<any, any, any>;
   }> = [];
+  middlewares?: BunsterMiddleware[];
 
-  constructor(basePath: RoutePath) {
-    this.basePath = basePath;
+  constructor(params: {
+    basePath: RoutePath;
+    middlewares?: BunsterMiddleware[];
+  }) {
+    this.basePath = params.basePath;
+    this.middlewares = params.middlewares;
   }
 
   private addRoute<P, Q, B>(

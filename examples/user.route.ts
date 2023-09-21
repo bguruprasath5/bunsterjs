@@ -10,7 +10,9 @@ const inputSchema = {
   }),
 };
 
-const userRouteGroup = new BunsterRouteGroup("/user");
+const userRouteGroup = new BunsterRouteGroup({
+  basePath: "/user",
+});
 
 userRouteGroup.get({
   path: "/id/:id",

@@ -2,6 +2,7 @@ import { RadixRouter } from "radix3";
 import { ZodSchema, z } from "zod";
 import { BunsterLoggerConfig } from "./logger.ts";
 import { BunsterRouteGroup } from "./router-group.ts";
+import { HttpStatus } from "./http-status.enum.ts";
 
 export type ServeOptions = {
   port?: string | number;
@@ -27,11 +28,11 @@ export interface BunsterContext<P = any, Q = any, B = any> {
   meta: Record<string, unknown>;
   sendJson: (
     data: any,
-    params?: { headers?: HeadersInit; status?: number }
+    params?: { headers?: HeadersInit; status?: HttpStatus }
   ) => Response | Promise<Response>;
   sendText: (
     data: string,
-    params?: { headers?: HeadersInit; status?: number }
+    params?: { headers?: HeadersInit; status?: HttpStatus }
   ) => Response | Promise<Response>;
 }
 
@@ -51,7 +52,6 @@ export type RouteParams<P, Q, B> = {
 export type MountParams = {
   path: RoutePath;
   routeGroup: BunsterRouteGroup;
-  middlewares?: BunsterMiddleware[];
 };
 
 export type BunsterTaskContext = {
