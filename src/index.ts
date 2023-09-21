@@ -229,9 +229,9 @@ class Bunster {
       for (const middleware of matched.middlewares ?? []) {
         await middleware(context);
       }
-      return matched.handler(context);
+      return await matched.handler(context);
     } catch (error) {
-      this.#logger?.error(`${error}`);
+      logRequest("error", `${error}`);
       if (error instanceof HttpError) {
         return this.sendError(error.message, error.status);
       } else {
@@ -249,13 +249,6 @@ class Bunster {
     this.#cors = options.cors ?? false;
     const server = Bun.serve({
       ...options,
-      error: async (error) => {
-        if (error instanceof HttpError) {
-          return this.sendError(error.message, error.status);
-        } else {
-          return this.sendError(error?.toString() ?? "An error occurred");
-        }
-      },
       fetch: async (request) => {
         const requestId = crypto.randomUUID();
         if (options.loggerConfig?.logRequest) {
