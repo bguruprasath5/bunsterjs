@@ -33,6 +33,16 @@ export class BunsterDateTime {
     return this.addHours(date, -hours);
   }
 
+  // Add minutes to a Date object
+  static addMinutes(date: Date, minutes: number): Date {
+    return new Date(date.getTime() + minutes * 60000);
+  }
+
+  // Subtract minutes from a Date object
+  static subtractMinutes(date: Date, minutes: number): Date {
+    return new Date(date.getTime() - minutes * 60000);
+  }
+
   // Format a Date object to 'YYYY-MM-DD'
   static formatDate(date: Date): string {
     const year = date.getFullYear();
