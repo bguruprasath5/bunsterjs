@@ -9,6 +9,7 @@ import {
   BunsterMiddleware,
   BunsterTaskHandler,
   HttpMethod,
+  MountParams,
   RouteParams,
   RoutePath,
   Router,
@@ -23,13 +24,18 @@ import BunsterLogger from "./logger.ts";
 class Bunster {
   #scheduler: Scheduler = new Scheduler();
   #logger: BunsterLogger | null = null;
+  #cors: boolean = false;
   #routers: Router = Object.fromEntries(
     ["GET", "POST", "PUT", "PATCH", "DELETE"].map((method) => [
       method,
       createRouter(),
     ])
   ) as Router;
-
+  static headers: Record<string, string> = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
   #middlewares: BunsterMiddleware[] = [];
 
   private route<P, Q, B>(method: HttpMethod, params: RouteParams<P, Q, B>) {
@@ -54,44 +60,39 @@ class Bunster {
 
   globalMiddleware(middleware: BunsterMiddleware) {
     this.#middlewares.push(middleware);
+    return this;
   }
 
-  mount(params: {
-    path: RoutePath;
-    routeGroup: BunsterRouteGroup;
-    middlewares?: BunsterMiddleware[];
-  }) {
+  mount(params: MountParams) {
     for (const route of params.routeGroup.getRoutes()) {
-      this.addRoute(
-        params.path === "/"
-          ? route.params.path
-          : ((params.path + route.params.path) as RoutePath),
-        route.params.handler,
-        route.method,
-        route.params?.input,
-        route.params?.middlewares
-      );
+      this.route(route.method, route.params);
     }
+    return this;
   }
 
   get<P, Q, B>(params: RouteParams<P, Q, B>) {
     this.route("GET", params);
+    return this;
   }
 
   post<P, Q, B>(params: RouteParams<P, Q, B>) {
     this.route("POST", params);
+    return this;
   }
 
   put<P, Q, B>(params: RouteParams<P, Q, B>) {
     this.route("PUT", params);
+    return this;
   }
 
   patch<P, Q, B>(params: RouteParams<P, Q, B>) {
     this.route("PATCH", params);
+    return this;
   }
 
   delete<P, Q, B>(params: RouteParams<P, Q, B>) {
     this.route("DELETE", params);
+    return this;
   }
 
   private sendResponse(
@@ -100,12 +101,17 @@ class Bunster {
     status: number = 200,
     headers: HeadersInit = {}
   ) {
+    const responseHeaders = {
+      "Content-Type": contentType,
+      ...headers,
+    };
+    if (this.#cors) {
+      Object.assign(responseHeaders, Bunster.headers);
+    }
+
     return new Response(data, {
       status,
-      headers: {
-        "Content-Type": contentType,
-        ...headers,
-      },
+      headers: responseHeaders,
     });
   }
 
@@ -130,7 +136,7 @@ class Bunster {
     id: string;
     cronExpression: string;
     task: BunsterTaskHandler;
-  }): void {
+  }) {
     this.#scheduler.schedule(params.id, params.cronExpression, () => {
       const requestId = crypto.randomUUID();
       params.task({
@@ -142,6 +148,7 @@ class Bunster {
         },
       });
     });
+    return this;
   }
 
   listScheduledTasks(): string[] {
@@ -149,13 +156,6 @@ class Bunster {
   }
 
   private async handle(requestId: string, request: Request) {
-    const headers: Record<string, string> = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-    let status = 200;
-
     const { pathname, searchParams } = new URL(request.url);
 
     const matched =
@@ -189,14 +189,20 @@ class Bunster {
         meta: {},
         headers: request.headers,
         log: logRequest,
-        sendJson: (data: any) => this.sendJson(data, status, headers),
-        sendText: (data: string) => this.sendText(data, status, headers),
-        setStatus: (statusCode: number) => {
-          status = statusCode;
-        },
-        setHeader: (name: string, value: string) => {
-          headers[name] = value;
-        },
+        sendJson: (
+          data: any,
+          params?: { headers?: HeadersInit; status?: number }
+        ) =>
+          this.sendJson(data, params?.status, {
+            ...params?.headers,
+          }),
+        sendText: (
+          data: string,
+          params?: { headers?: HeadersInit; status?: number }
+        ) =>
+          this.sendText(data, params?.status, {
+            ...params?.headers,
+          }),
       };
 
       await Promise.all(
@@ -224,6 +230,7 @@ class Bunster {
    */
   serve(options: ServeOptions, cb?: (server: Server) => void) {
     this.#logger = new BunsterLogger(options.loggerConfig);
+    this.#cors = options.cors ?? false;
     const server = Bun.serve({
       ...options,
       fetch: async (request) => {

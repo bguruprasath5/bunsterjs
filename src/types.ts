@@ -1,11 +1,13 @@
 import { RadixRouter } from "radix3";
 import { ZodSchema, z } from "zod";
 import { BunsterLoggerConfig } from "./logger.ts";
+import { BunsterRouteGroup } from "./router-group.ts";
 
 export type ServeOptions = {
   port?: string | number;
   hostname?: string;
   loggerConfig?: BunsterLoggerConfig;
+  cors?: boolean;
 };
 
 export type Router = {
@@ -23,10 +25,14 @@ export interface BunsterContext<P = any, Q = any, B = any> {
   headers?: Request["headers"];
   log: (level: "info" | "debug" | "error" | "warn", msg: string) => void;
   meta: Record<string, unknown>;
-  sendJson: (data: any) => Response | Promise<Response>;
-  sendText: (data: string) => Response | Promise<Response>;
-  setStatus: (statusCode: number) => void;
-  setHeader: (name: string, value: string) => void;
+  sendJson: (
+    data: any,
+    params?: { headers?: HeadersInit; status?: number }
+  ) => Response | Promise<Response>;
+  sendText: (
+    data: string,
+    params?: { headers?: HeadersInit; status?: number }
+  ) => Response | Promise<Response>;
 }
 
 export type BunsterHandlerInput<Params = any, Query = any, Body = any> = {
@@ -40,6 +46,12 @@ export type RouteParams<P, Q, B> = {
   handler: BunsterHandler<P, Q, B>;
   input?: BunsterHandlerInput<P, Q, B>;
   middlewares?: BunsterMiddleware<P, Q, B>[];
+};
+
+export type MountParams = {
+  path: RoutePath;
+  routeGroup: BunsterRouteGroup;
+  middlewares?: BunsterMiddleware[];
 };
 
 export type BunsterTaskContext = {

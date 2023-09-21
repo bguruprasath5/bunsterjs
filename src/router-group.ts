@@ -18,7 +18,7 @@ export class BunsterRouteGroup {
     this.basePath = basePath;
   }
 
-  addRoute<P, Q, B>(
+  private addRoute<P, Q, B>(
     path: RoutePath,
     handler: BunsterHandler,
     method: HttpMethod,
@@ -44,6 +44,7 @@ export class BunsterRouteGroup {
       params?.input,
       params.middlewares
     );
+    return this;
   }
 
   post<P, Q, B>(params: RouteParams<P, Q, B>) {
@@ -54,6 +55,8 @@ export class BunsterRouteGroup {
       params?.input,
       params.middlewares
     );
+
+    return this;
   }
 
   put<P, Q, B>(params: RouteParams<P, Q, B>) {
@@ -64,6 +67,8 @@ export class BunsterRouteGroup {
       params?.input,
       params.middlewares
     );
+
+    return this;
   }
 
   patch<P, Q, B>(params: RouteParams<P, Q, B>) {
@@ -74,6 +79,8 @@ export class BunsterRouteGroup {
       params?.input,
       params.middlewares
     );
+
+    return this;
   }
 
   delete<P, Q, B>(params: RouteParams<P, Q, B>) {
@@ -84,6 +91,8 @@ export class BunsterRouteGroup {
       params?.input,
       params.middlewares
     );
+
+    return this;
   }
 
   // Get all the routes in this group
