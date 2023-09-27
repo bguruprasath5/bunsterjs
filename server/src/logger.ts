@@ -93,24 +93,8 @@ class BunsterLogger {
     });
   }
 
-  log(level: "info" | "debug" | "error" | "warn", msg: string) {
-    this.logger[level](msg);
-  }
-
-  info(msg: string) {
-    this.log("info", msg);
-  }
-
-  error(msg: string) {
-    this.log("error", msg);
-  }
-
-  debug(msg: string) {
-    this.log("debug", msg);
-  }
-
-  warn(msg: string) {
-    this.log("warn", msg);
+  log(msg: string) {
+    this.logger.info(msg);
   }
 }
 

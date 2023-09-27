@@ -1,5 +1,6 @@
 import { ZodError, ZodSchema } from "zod";
-import { HttpError, HttpStatus } from ".";
+import { HttpError } from "./error";
+import { HttpStatus } from "./http-status.enum";
 
 export async function parseAndValidate<T>(
   data: any,
