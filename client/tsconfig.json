@@ -2,7 +2,7 @@
   "compilerOptions": {
     "lib": ["ESNext"],
     "module": "esnext",
-    "target": "ES2022",
+    "target": "esnext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,
@@ -11,15 +11,10 @@
     "strict": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "noUnusedLocals": true,
-    "noImplicitAny": true,
-    "outDir": "dist",
     "types": [
       "bun-types" // add Bun global
     ]

@@ -1,0 +1,32 @@
+{
+  "name": "@bunster/client",
+  "author": "Guruprasath Balasubramanian <hello@guruprasath.dev>",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "description": "",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "bunster",
+    "bunsterjs",
+    "bun",
+    "bun router",
+    "bun framework",
+    "bun api"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "bun-plugin-dts": "^0.2.1",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.5.1",
+    "zod": "^3.22.2"
+  }
+}
