@@ -1,8 +1,10 @@
 import { ZodSchema, z } from "zod";
+import { BunsterLoggerConfig } from "./logger";
 
 export type ServeOptions = {
   port?: string | number;
   hostname?: string;
+  loggerConfig?: BunsterLoggerConfig;
 };
 
 export type Middleware = (context: RouteContext) => Promise<void>;

@@ -36,6 +36,11 @@ function route<Input>(input?: ZodSchema<Input, z.ZodTypeDef, any>) {
 class Bunster {
   #logger: BunsterLogger;
   #scheduler: Scheduler;
+  static headers: Record<string, string> = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
   constructor(private readonly routes: { [key: string]: Route } = {}) {
     this.#logger = new BunsterLogger();
     this.#scheduler = new Scheduler();
@@ -45,10 +50,10 @@ class Bunster {
     message: string,
     status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR
   ) {
-    return Response.json({ message }, { status });
+    return Response.json({ message }, { status, headers: Bunster.headers });
   }
 
-  private async handle(request: Request): Promise<Response> {
+  private async handle(request: Request, traceId: string): Promise<Response> {
     const { pathname, searchParams } = new URL(request.url);
     if (pathname !== "/") {
       return this.sendError("Not found", HttpStatus.NOT_FOUND);
@@ -56,7 +61,6 @@ class Bunster {
 
     let query = Object.fromEntries(searchParams.entries());
     const route = this.routes[query["action"]];
-    console.log(query);
 
     if (!route) {
       return this.sendError("Not found", HttpStatus.NOT_FOUND);
@@ -72,8 +76,8 @@ class Bunster {
       let context: RouteContext = {
         input,
         headers: request.headers,
-        log: (message: string) => {
-          this.#logger.log(message);
+        log: (msg: string) => {
+          this.#logger.log(`[${traceId}] ${msg}`);
         },
         meta: {},
       };
@@ -82,8 +86,9 @@ class Bunster {
       for (const middleware of route.middlewares) {
         await middleware(context);
       }
-
-      return await route.handler(context);
+      return Response.json(await route.handler(context), {
+        headers: Bunster.headers,
+      });
     } catch (error) {
       if (error instanceof HttpError) {
         return this.sendError(error.message, error.status);
@@ -102,7 +107,18 @@ class Bunster {
       ...options,
       fetch: async (request) => {
         if (request.method === "POST") {
-          return Response.json(await this.handle(request));
+          const traceId = crypto.randomUUID();
+          if (options.loggerConfig?.logRequest) {
+            const startTime = Date.now();
+            const response = await this.handle(request, traceId);
+            const responseTime = Date.now() - startTime;
+            this.#logger?.log(
+              `[${traceId}] ${request.method} ${request.url} - ${response.status} [${responseTime}ms]`
+            );
+            return response;
+          } else {
+            return await this.handle(request, traceId);
+          }
         } else {
           return this.sendError("not found", HttpStatus.NOT_FOUND);
         }

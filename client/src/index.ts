@@ -1,18 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { Route } from "./types";
-
-type Routes = { [key: string]: Route<any, any> };
-
-type ExtractRouteType<R, K extends keyof R> = R[K] extends Route<
-  infer Input,
-  infer Output
->
-  ? (input: Input) => Promise<Output>
-  : never;
-
-type ApiClientType<R extends Routes> = {
-  [K in keyof R]: ExtractRouteType<R, K>;
-};
+import { ApiClientType, Route } from "./types";
 
 function createApiClient<R extends Record<string, Route<any, any>>>(
   baseUrl: string

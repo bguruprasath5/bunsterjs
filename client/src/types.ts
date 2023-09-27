@@ -1,22 +1,30 @@
 import { ZodSchema, z } from "zod";
 
-export type ServeOptions = {
-  port?: string | number;
-  hostname?: string;
+export type Routes = { [key: string]: Route<any, any> };
+
+export type ExtractRouteType<R, K extends keyof R> = R[K] extends Route<
+  infer Input,
+  infer Output
+>
+  ? (input: Input) => Promise<Output>
+  : never;
+
+export type ApiClientType<R extends Routes> = {
+  [K in keyof R]: ExtractRouteType<R, K>;
 };
 
-export type Middleware = (context: RouteContext) => Promise<void>;
+type Middleware = (context: RouteContext) => Promise<void>;
 
-export type RouteOutput = { [key: string]: any } | any[];
+type RouteOutput = { [key: string]: any } | any[];
 
-export type RouteContext<Input = any> = {
+type RouteContext<Input = any> = {
   input?: Input;
   log: (message: string) => void;
   headers: Headers;
   meta: Record<string, any>;
 };
 
-export type RouteHandler<Input, Output extends RouteOutput> = (
+type RouteHandler<Input, Output extends RouteOutput> = (
   context: RouteContext<Input>
 ) => Output | Promise<Output>;
 
