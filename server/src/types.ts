@@ -11,11 +11,17 @@ export type Middleware = (context: RouteContext) => Promise<void>;
 
 export type RouteOutput = { [key: string]: any } | any[];
 
+export type Logger = (message: string) => void;
+
 export type RouteContext<Input = any> = {
   input?: Input;
-  log: (message: string) => void;
+  log: Logger;
   headers: Headers;
   meta: Record<string, any>;
+};
+
+export type SchedulerContext = {
+  log: Logger;
 };
 
 export type RouteHandler<Input, Output extends RouteOutput> = (

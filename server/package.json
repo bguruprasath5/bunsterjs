@@ -1,7 +1,7 @@
 {
   "name": "@bunsterjs/server",
   "author": "Guruprasath Balasubramanian <hello@guruprasath.dev>",
-  "version": "0.3.0",
+  "version": "0.9.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -31,6 +31,7 @@
     "jose": "^4.14.6",
     "node-cron": "^3.0.2",
     "nodemailer": "^6.9.5",
+    "reflect-metadata": "^0.1.13",
     "winston": "^3.10.0",
     "winston-daily-rotate-file": "^4.7.1",
     "zod": "^3.22.2"

@@ -6,3 +6,21 @@ export class HttpError extends Error {
     Object.setPrototypeOf(this, HttpError.prototype);
   }
 }
+
+export class BadRequestError extends HttpError {
+  constructor(readonly message: string) {
+    super(message, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class InternalServerError extends HttpError {
+  constructor(readonly message: string) {
+    super(message, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+export class UnauthorizedError extends HttpError {
+  constructor(readonly message: string) {
+    super(message, HttpStatus.UNAUTHORIZED);
+  }
+}

@@ -5,9 +5,15 @@ import {
   RouteContext,
   RouteHandler,
   RouteOutput,
+  SchedulerContext,
   ServeOptions,
 } from "./types";
-import { HttpError } from "./error";
+import {
+  BadRequestError,
+  HttpError,
+  InternalServerError,
+  UnauthorizedError,
+} from "./error";
 import { HttpStatus } from "./http-status.enum";
 import { parseAndValidate } from "./validator";
 import BunsterLogger from "./logger";
@@ -31,6 +37,20 @@ function route<Input>(input?: ZodSchema<Input, z.ZodTypeDef, any>) {
   return {
     handle,
   };
+}
+
+function createRouter(middlewares: Middleware[] = []) {
+  function routes<T extends { [key: string]: Route }>(inputRoutes: T): T {
+    const routes: T = { ...inputRoutes };
+    for (let routeKey in routes) {
+      routes[routeKey].middlewares = [
+        ...middlewares,
+        ...(routes[routeKey].middlewares || []),
+      ];
+    }
+    return routes;
+  }
+  return { routes };
 }
 
 class Bunster {
@@ -98,15 +118,30 @@ class Bunster {
     }
   }
 
-  schedule(cronExpression: CronExpression, taskFunction: () => void) {
-    this.#scheduler.schedule(cronExpression, taskFunction);
+  schedule(
+    cronExpression: CronExpression,
+    taskFunction: (context: SchedulerContext) => void
+  ) {
+    this.#scheduler.schedule(cronExpression, () => {
+      const traceId = crypto.randomUUID();
+      taskFunction({
+        log: (msg: string) => {
+          this.#logger.log(`[${traceId}] ${msg}`);
+        },
+      });
+    });
   }
 
   listen(options: ServeOptions) {
     const server = Bun.serve({
       ...options,
       fetch: async (request) => {
-        if (request.method === "POST") {
+        if (request.method === "OPTIONS") {
+          return new Response(null, {
+            headers: Bunster.headers,
+            status: 204, // No Content
+          });
+        } else if (request.method === "POST") {
           const traceId = crypto.randomUUID();
           if (options.loggerConfig?.logRequest) {
             const startTime = Date.now();
@@ -134,9 +169,15 @@ class Bunster {
 export {
   Bunster,
   route,
+  createRouter,
   BunsterJwt,
   BunsterMail,
   HttpError,
+  BadRequestError,
+  InternalServerError,
+  UnauthorizedError,
   HttpStatus,
   BunsterDateTime,
+  CronExpression,
+  SchedulerContext,
 };
