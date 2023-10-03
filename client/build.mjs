@@ -5,7 +5,7 @@ const result = await Bun.build({
   outdir: "./dist",
   minify: true,
   plugins: [dts()],
-  target: "bun",
+  target: "browser",
 });
 if (!result.success) {
   console.error("Build failed");

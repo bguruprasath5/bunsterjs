@@ -1,12 +1,19 @@
 import axios, { AxiosInstance } from "axios";
-import { ApiClientType, Route } from "./types";
+import { ApiClientType, CreateApiClientConfig, Route } from "./types";
 
 function createApiClient<R extends Record<string, Route<any, any>>>(
-  baseUrl: string
+  params: CreateApiClientConfig
 ): ApiClientType<R> {
   const axiosInstance: AxiosInstance = axios.create({
-    baseURL: baseUrl,
+    baseURL: params.baseUrl,
   });
+
+  if (params.requestInterceptor) {
+    axiosInstance.interceptors.request.use(params.requestInterceptor);
+  }
+  if (params.responseInterceptor) {
+    axiosInstance.interceptors.response.use(params.responseInterceptor);
+  }
 
   const handler = {
     get: function (target: any, prop: string) {

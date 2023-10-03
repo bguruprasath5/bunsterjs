@@ -1,3 +1,4 @@
+import { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { ZodSchema, z } from "zod";
 
 export type Routes = { [key: string]: Route<any, any> };
@@ -33,3 +34,11 @@ export type Route<Input = any, Output extends RouteOutput = any> = {
   handler: RouteHandler<Input, Output>;
   middlewares: Middleware[];
 };
+
+export interface CreateApiClientConfig {
+  baseUrl: string;
+  requestInterceptor?: (
+    config: InternalAxiosRequestConfig
+  ) => InternalAxiosRequestConfig;
+  responseInterceptor?: (response: AxiosResponse) => AxiosResponse;
+}
